@@ -2,71 +2,60 @@
 
 ## 概要
 
-Goの標準ライブラリ（net/http, encoding/json）を使って実装した、メモCRUD APIです。データは現在メモリ上で保持しています。
-以下のような操作を実装しています。
+Goの標準ライブラリ（`net/http`, `encoding/json`）で実装したメモCRUD APIです。  
+現在は SQLite（`modernc.org/sqlite`）を導入し、`notes` テーブルを作成して起動しています。
 
-- メモの作成 (POST /notes)
-- メモの一覧表示 (GET /notes)
-- メモの取得 (GET /notes/{id})
-- メモの更新 (PUT /notes/{id})
-- メモの削除 (DELETE /notes/{id})
+現状のデータ保存先は以下の通りです。
 
-コード上ではダミーデータを使用しています。
+- `GET /notes` は SQLite の `notes` テーブルから取得
+- `GET /notes/{id}`, `POST /notes`, `PUT /notes/{id}`, `DELETE /notes/{id}` はメモリ配列を使用
 
 ## 実行方法
 
-#### サーバ起動
-ターミナルを開き、以下のコマンドを実行してサーバを起動します。
+### サーバ起動
+
 ```bash
 go run main.go
 ```
 
-#### メモ一覧取得
-GETリクエストでメモの一覧を取得できます。ダミーデータの2つが初期状態では返ります。
+起動時に `notes.db` が作成され、`notes` テーブルが存在しない場合は自動作成されます。
+
+## API 利用例
+
+### メモ一覧取得
+
 ```bash
 curl http://localhost:8080/notes
 ```
 
-#### メモ取得
-GETリクエストで特定のメモを取得できます。
+### メモ取得
+
 ```bash
 curl http://localhost:8080/notes/1
 ```
 
-#### メモ作成
-POSTリクエストでメモを作成できます。
+### メモ作成
+
 ```bash
-curl -X POST http://localhost:8080/notes -H "Content-Type: application/json" -d '{"title": "新しいメモ", "content": "メモの内容"}'
+curl -X POST http://localhost:8080/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "新しいメモ", "content": "メモの内容"}'
 ```
 
-#### メモ更新
-PUTリクエストでメモを更新できます。
+### メモ更新
+
 ```bash
-curl -X PUT http://localhost:8080/notes/1 -H "Content-Type: application/json" -d '{"title": "更新されたメモ", "content": "更新された内容"}'
+curl -X PUT http://localhost:8080/notes/1 \
+  -H "Content-Type: application/json" \
+  -d '{"title": "更新されたメモ", "content": "更新された内容"}'
 ```
 
-#### メモ削除
-DELETEリクエストでメモを削除できます。
+### メモ削除
+
 ```bash
 curl -X DELETE http://localhost:8080/notes/1
 ```
 
-## その他
+## メモ
 
-### 設計で詰まったこと
-- 頭のなかで整理できておらず、serverに関するコードを書いてないのにGETリクエストに関するコードのみ書いて混乱した。
-  --> サーバー起動とハンドラ登録の流れが最初は曖昧だったが、HandleFunc と ListenAndServe の役割を分けて理解できた。
-
-- メモの作成、更新、削除の際に、idを指定して操作する必要があることに気づかず、混乱した。そして、その実装方法がわからなかった。
-
-- POST,PUTの理解してから実装すべきだった。インプットが足りていなかった。
-
-- Decode,Encodeの理解が浅く、どっちがどっちかわからなくなった。
-  -->POST/PUT では JSON を Decode して受け取り、レスポンスでは Encode して返す流れを学んだ。
-
-### 今後実装したい機能
-- バリデーション追加
-- データベースの接続
-- データベースの操作
-- Handler,Service,Repositoryの分離
-- エラーハンドリング
+現時点ではDB移行の途中段階です。今後は `GET /notes/{id}` 以降のCRUDも SQLite に統一予定です。
