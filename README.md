@@ -9,7 +9,8 @@ Goの標準ライブラリ（`net/http`, `encoding/json`）で実装したメモ
 
 - `GET /notes` は SQLite の `notes` テーブルから取得
 - `GET /notes/{id}` と `POST /notes` は SQLite の `notes` テーブルを使用
-- `PUT /notes/{id}`, `DELETE /notes/{id}` はメモリ配列を使用
+- `PUT /notes/{id}` も SQLite の `notes` テーブルを使用
+- `DELETE /notes/{id}` はメモリ配列を使用
 
 ## 実行方法
 
@@ -59,4 +60,4 @@ curl -X DELETE http://localhost:8080/notes/1
 
 ## メモ
 
-現時点ではDB移行の途中段階です。今後は `GET /notes/{id}` 以降のCRUDも SQLite に統一予定です。
+現時点ではDB移行の途中段階です。今後は `DELETE /notes/{id}` も SQLite に統一予定です。
