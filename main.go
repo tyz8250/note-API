@@ -19,13 +19,26 @@ type Note struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	// JSONエラーを返す方式
+	w.Header().Set("Content-Type", "application/json")
+	// 400や404などのステータスコードを返す
+	w.WriteHeader(status)
+	// エラーをJSONで返す
+	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
+}
+
 // GET /notes - 一覧を取得
 func getNotes(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT id, title, content, created_at, updated_at FROM notes`
 	// db.Query(...) で結果をもらう
 	rows, err := db.Query(query)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer rows.Close()
@@ -44,12 +57,13 @@ func getNotes(w http.ResponseWriter, r *http.Request) {
 		)
 		// スキャンエラーをチェック
 		if err != nil {
-			http.Error(w, "failed to scan note", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "failed to scan note")
 			return
 		}
 		noteList = append(noteList, note)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(noteList)
 }
 
@@ -59,7 +73,7 @@ func getNotesId(w http.ResponseWriter, r *http.Request) {
 
 	targetID, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
@@ -78,23 +92,23 @@ func getNotesId(w http.ResponseWriter, r *http.Request) {
 	)
 	// データが見つからなかった場合
 	if err == sql.ErrNoRows {
-		http.Error(w, "not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	// その他のエラーの場合
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
 	if err != nil {
-		http.Error(w, "failed to parse created_at", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "failed to parse created_at")
 		return
 	}
 
 	note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
 	if err != nil {
-		http.Error(w, "failed to parse updated_at", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "failed to parse updated_at")
 		return
 	}
 
@@ -111,17 +125,17 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディをデコードする
 	var request NoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	// タイトルと内容が空でないかチェック
 	if strings.TrimSpace(request.Title) == "" {
-		http.Error(w, "title is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "title is required")
 		return
 	}
 
 	if strings.TrimSpace(request.Content) == "" {
-		http.Error(w, "content is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "content is required")
 		return
 	}
 
@@ -133,7 +147,7 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 	`
 	_, err := db.Exec(query, request.Title, request.Content, now, now)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -146,7 +160,7 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
@@ -158,16 +172,16 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 	// リクエストボディをデコードする
 	var request NoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	// タイトルと内容が空でないかチェック
 	if strings.TrimSpace(request.Title) == "" {
-		http.Error(w, "title is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "title is required")
 		return
 	}
 	if strings.TrimSpace(request.Content) == "" {
-		http.Error(w, "content is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "content is required")
 		return
 	}
 
@@ -181,19 +195,19 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 	// 更新命令
 	result, err := db.Exec(query, request.Title, request.Content, now, id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// 更新された行数を取得
 	affected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if affected == 0 {
-		http.Error(w, "not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -205,25 +219,25 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 	query := "DELETE FROM notes WHERE id = ?"
 	result, err := db.Exec(query, id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// 削除された行数を取得
 	affected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if affected == 0 {
-		http.Error(w, "not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -234,6 +248,10 @@ var db *sql.DB
 func main() {
 	var err error
 	db, err = sql.Open("sqlite", "./notes.db")
+	// DB接続に失敗した場合、プログラムを終了する
+	if err != nil {
+		panic(err)
+	}
 	query := `CREATE TABLE IF NOT EXISTS notes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT NOT NULL,
