@@ -5,12 +5,13 @@
 Goの標準ライブラリ（`net/http`, `encoding/json`）で実装したメモCRUD APIです。  
 現在は SQLite（`modernc.org/sqlite`）を導入し、`notes` テーブルを作成して起動しています。
 
-現状のデータ保存先は以下の通りです。
+現状、全CRUDで SQLite の `notes` テーブルを使用しています。
 
-- `GET /notes` は SQLite の `notes` テーブルから取得
-- `GET /notes/{id}` と `POST /notes` は SQLite の `notes` テーブルを使用
-- `PUT /notes/{id}` も SQLite の `notes` テーブルを使用
-- `DELETE /notes/{id}` はメモリ配列を使用
+- `GET /notes`
+- `GET /notes/{id}`
+- `POST /notes`
+- `PUT /notes/{id}`
+- `DELETE /notes/{id}`
 
 ## 実行方法
 
@@ -60,4 +61,4 @@ curl -X DELETE http://localhost:8080/notes/1
 
 ## メモ
 
-現時点ではDB移行の途中段階です。今後は `DELETE /notes/{id}` も SQLite に統一予定です。
+SQLite移行は完了しています。次のステップとしては、レスポンス形式の統一やバリデーション追加、テスト拡充を予定しています。
