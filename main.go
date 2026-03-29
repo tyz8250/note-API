@@ -47,19 +47,33 @@ func getNotes(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var note Note
+		var createdAt string
+		var updatedAt string
 
 		err := rows.Scan(
 			&note.ID,
 			&note.Title,
 			&note.Content,
-			&note.CreatedAt,
-			&note.UpdatedAt,
+			&createdAt,
+			&updatedAt,
 		)
 		// スキャンエラーをチェック
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to scan note")
 			return
 		}
+
+		note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to parse created_at")
+			return
+		}
+		note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to parse updated_at")
+			return
+		}
+
 		noteList = append(noteList, note)
 	}
 
