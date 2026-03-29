@@ -172,19 +172,32 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// notesの中からidが一致するものを探し、更新する
-	for i, note := range notes {
-		if note.ID == id {
-			notes[i].Title = request.Title
-			notes[i].Content = request.Content
-			notes[i].UpdatedAt = time.Now()
-			json.NewEncoder(w).Encode(notes[i])
-			return
-		}
+	now := time.Now().Format(time.RFC3339)
+	query := `
+	UPDATE notes
+	SET title = ?, content = ?, updated_at = ?
+	WHERE id = ?
+	`
+
+	// 更新命令
+	result, err := db.Exec(query, request.Title, request.Content, now, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// 該当するidがない場合は404を返す
-	http.Error(w, "not found", http.StatusNotFound)
+	// 更新された行数を取得
+	affected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if affected == 0 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // DELETE /notes/{id} - IDでメモを削除
