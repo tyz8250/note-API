@@ -106,18 +106,20 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	// 新しいメモを作成する
-	newNote := Note{
-		ID:        len(notes) + 1,
-		Title:     request.Title,
-		Content:   request.Content,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+
+	// 時刻を決める
+	now := time.Now().Format(time.RFC3339)
+	query := `
+	INSERT INTO notes (title, content, created_at, updated_at)
+	VALUES (?, ?, ?, ?)
+	`
+	_, err := db.Exec(query, request.Title, request.Content, now, now)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	notes = append(notes, newNote)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newNote)
+	w.WriteHeader(http.StatusCreated) // 201 Created
 }
 
 // PUT /notes/{id} - IDでメモを更新
