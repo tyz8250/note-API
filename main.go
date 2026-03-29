@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 type Note struct {
@@ -38,7 +41,36 @@ func init() {
 
 // GET /notes - 一覧を取得
 func getNotes(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(notes)
+	query := `SELECT id, title, content, created_at, updated_at FROM notes`
+	// db.Query(...) で結果をもらう
+	rows, err := db.Query(query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	noteList := []Note{} // 最後にJSONで返すための変数
+
+	for rows.Next() {
+		var note Note
+
+		err := rows.Scan(
+			&note.ID,
+			&note.Title,
+			&note.Content,
+			&note.CreatedAt,
+			&note.UpdatedAt,
+		)
+		// スキャンエラーをチェック
+		if err != nil {
+			http.Error(w, "failed to scan note", http.StatusInternalServerError)
+			return
+		}
+		noteList = append(noteList, note)
+	}
+
+	json.NewEncoder(w).Encode(noteList)
 }
 
 // GET /notes/{id} - IDでメモを取得
@@ -149,7 +181,27 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "not found", http.StatusNotFound)
 }
 
+var db *sql.DB
+
 func main() {
+	var err error
+	db, err = sql.Open("sqlite", "./notes.db")
+	query := `CREATE TABLE IF NOT EXISTS notes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		content TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`
+
+	_, err = db.Exec(query) // テーブルを作成する
+	if err != nil {
+		panic(err)
+	}
+	// テーブルを作成に失敗した場合、プログラムを終了する
+
+	defer db.Close()
+
 	http.HandleFunc("GET /notes", getNotes)
 	http.HandleFunc("GET /notes/{id}", getNotesId)
 	http.HandleFunc("POST /notes", postNotes)
