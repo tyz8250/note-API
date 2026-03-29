@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -113,6 +114,16 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	// タイトルと内容が空でないかチェック
+	if strings.TrimSpace(request.Title) == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(request.Content) == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
+		return
+	}
 
 	// 時刻を決める
 	now := time.Now().Format(time.RFC3339)
@@ -148,6 +159,15 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 	var request NoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	// タイトルと内容が空でないかチェック
+	if strings.TrimSpace(request.Title) == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(request.Content) == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
 		return
 	}
 
