@@ -83,14 +83,42 @@ func getNotesId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, note := range notes {
-		if note.ID == targetID {
-			json.NewEncoder(w).Encode(note)
-			return
-		}
+	query := `SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?`
+	var note Note
+	var createdAt string
+	var updatedAt string
+
+	// DBからメモを取得
+	err = db.QueryRow(query, targetID).Scan(
+		&note.ID,
+		&note.Title,
+		&note.Content,
+		&createdAt,
+		&updatedAt,
+	)
+	// データが見つからなかった場合
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
 	}
-	// 該当するIDが見つからない場合は404を返す
-	http.Error(w, "not found", http.StatusNotFound)
+	// その他のエラーの場合
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		http.Error(w, "failed to parse created_at", http.StatusInternalServerError)
+		return
+	}
+
+	note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		http.Error(w, "failed to parse updated_at", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(note)
 }
 
 // POST /notes- 新規メモを作成

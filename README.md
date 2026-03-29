@@ -8,8 +8,8 @@ Goの標準ライブラリ（`net/http`, `encoding/json`）で実装したメモ
 現状のデータ保存先は以下の通りです。
 
 - `GET /notes` は SQLite の `notes` テーブルから取得
-- `POST /notes` は SQLite の `notes` テーブルへ保存
-- `GET /notes/{id}`, `PUT /notes/{id}`, `DELETE /notes/{id}` はメモリ配列を使用
+- `GET /notes/{id}` と `POST /notes` は SQLite の `notes` テーブルを使用
+- `PUT /notes/{id}`, `DELETE /notes/{id}` はメモリ配列を使用
 
 ## 実行方法
 
