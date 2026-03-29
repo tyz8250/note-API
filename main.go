@@ -18,27 +18,6 @@ type Note struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// メモリ上に保存するための配列
-var notes []Note
-
-// ダミーデータを2つ用意する
-func init() {
-	notes = append(notes, Note{
-		ID:        1,
-		Title:     "初めてのメモ",
-		Content:   "初めてのメモです",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	})
-	notes = append(notes, Note{
-		ID:        2,
-		Title:     "2回目のメモ",
-		Content:   "2回目のメモです",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	})
-}
-
 // GET /notes - 一覧を取得
 func getNotes(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT id, title, content, created_at, updated_at FROM notes`
@@ -209,19 +188,25 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-
-	// 一致するnoteを探し、見つかったら削除する
-	for i, note := range notes {
-		if note.ID == id {
-			// 削除する
-			notes = append(notes[:i], notes[i+1:]...)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	query := "DELETE FROM notes WHERE id = ?"
+	result, err := db.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// 該当するidがない場合は404を返す
-	http.Error(w, "not found", http.StatusNotFound)
+	// 削除された行数を取得
+	affected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if affected == 0 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 var db *sql.DB
