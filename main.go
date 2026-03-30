@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"note-api/internal/repository"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +24,8 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+var noteRepo *repository.NoteRepository
+
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	// JSONエラーを返す方式
 	w.Header().Set("Content-Type", "application/json")
@@ -34,51 +37,15 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 
 // GET /notes - 一覧を取得
 func getNotes(w http.ResponseWriter, r *http.Request) {
-	query := `SELECT id, title, content, created_at, updated_at FROM notes`
-	// db.Query(...) で結果をもらう
-	rows, err := db.Query(query)
+
+	notes, err := noteRepo.GetAllNotes()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
-
-	noteList := []Note{} // 最後にJSONで返すための変数
-
-	for rows.Next() {
-		var note Note
-		var createdAt string
-		var updatedAt string
-
-		err := rows.Scan(
-			&note.ID,
-			&note.Title,
-			&note.Content,
-			&createdAt,
-			&updatedAt,
-		)
-		// スキャンエラーをチェック
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "failed to scan note")
-			return
-		}
-
-		note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "failed to parse created_at")
-			return
-		}
-		note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "failed to parse updated_at")
-			return
-		}
-
-		noteList = append(noteList, note)
-	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(noteList)
+	json.NewEncoder(w).Encode(notes)
 }
 
 // GET /notes/{id} - IDでメモを取得
@@ -260,6 +227,7 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 var db *sql.DB
 
 func main() {
+
 	var err error
 	db, err = sql.Open("sqlite", "./notes.db")
 	// DB接続に失敗した場合、プログラムを終了する
@@ -273,7 +241,7 @@ func main() {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`
-
+	noteRepo = repository.NewNoteRepository(db)
 	_, err = db.Exec(query) // テーブルを作成する
 	if err != nil {
 		panic(err)
