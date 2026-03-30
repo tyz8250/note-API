@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"note-api/internal/repository"
 	"strings"
 	"testing"
 
@@ -116,6 +117,8 @@ func setupTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create test table: %v", err)
 	}
+	noteRepo = repository.NewNoteRepository(db)
+
 	// テスト終了時にデータベースを閉じる
 	t.Cleanup(func() {
 		db.Close()
