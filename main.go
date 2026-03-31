@@ -58,41 +58,18 @@ func getNotesId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?`
-	var note Note
-	var createdAt string
-	var updatedAt string
-
-	// DBからメモを取得
-	err = db.QueryRow(query, targetID).Scan(
-		&note.ID,
-		&note.Title,
-		&note.Content,
-		&createdAt,
-		&updatedAt,
-	)
-	// データが見つからなかった場合
-	if err == sql.ErrNoRows {
-		writeJSONError(w, http.StatusNotFound, "not found")
-		return
-	}
-	// その他のエラーの場合
+	// メモを取得
+	note, err := noteRepo.GetNoteByID(targetID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			writeJSONError(w, http.StatusNotFound, "not found")
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to parse created_at")
-		return
-	}
 
-	note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to parse updated_at")
-		return
-	}
-
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(note)
 }
 
