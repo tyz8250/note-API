@@ -68,4 +68,4 @@ curl -X DELETE http://localhost:8080/notes/1
 ## メモ
 
 SQLite移行、バリデーション追加、エラーレスポンスのJSON統一に加えて、GET一覧の日時パース不具合を修正し、テストを追加しました。  
-また、`GET /notes` は `internal/repository` へ切り出して分離を開始しています。次のステップとしては、他エンドポイントの分離とテスト拡充を予定しています。
+また、`GET /notes` と `GET /notes/{id}` は `internal/repository` へ切り出して分離を開始しています。次のステップとしては、POST/PUT/DELETE も同様に分離し、テストを拡充する予定です。

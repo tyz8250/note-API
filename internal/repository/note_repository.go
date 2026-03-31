@@ -63,3 +63,37 @@ func (r *NoteRepository) GetAllNotes() ([]Note, error) {
 
 	return notes, nil
 }
+
+// データベースから特定のメモを取得
+func (r *NoteRepository) GetNoteByID(id int) (Note, error) {
+	query := `SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?`
+
+	// 受け皿を作る。時刻は文字列のため、一旦文字列で受ける
+	var note Note
+	var createdAt string
+	var updatedAt string
+
+	// DBから1件のメモを取得
+	err := r.db.QueryRow(query, id).Scan(
+		&note.ID,
+		&note.Title,
+		&note.Content,
+		&createdAt,
+		&updatedAt,
+	)
+	if err != nil {
+		return Note{}, err
+	}
+
+	note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return Note{}, err
+	}
+
+	note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return Note{}, err
+	}
+
+	return note, nil
+}
