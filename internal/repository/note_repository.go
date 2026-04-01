@@ -2,16 +2,9 @@ package repository
 
 import (
 	"database/sql"
+	"note-api/internal/model"
 	"time"
 )
-
-type Note struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	Content   string `json:"content"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
 
 type NoteRepository struct {
 	db *sql.DB
@@ -23,7 +16,7 @@ func NewNoteRepository(db *sql.DB) *NoteRepository {
 }
 
 // データベースからすべてのメモを取得
-func (r *NoteRepository) GetAllNotes() ([]Note, error) {
+func (r *NoteRepository) GetAllNotes() ([]model.Note, error) {
 	query := `SELECT id, title, content, created_at, updated_at FROM notes`
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -31,10 +24,10 @@ func (r *NoteRepository) GetAllNotes() ([]Note, error) {
 	}
 	defer rows.Close()
 
-	notes := []Note{}
+	notes := []model.Note{}
 
 	for rows.Next() {
-		var note Note
+		var note model.Note
 		var createdAtStr string
 		var updatedAtStr string
 
@@ -65,11 +58,11 @@ func (r *NoteRepository) GetAllNotes() ([]Note, error) {
 }
 
 // データベースから特定のメモを取得
-func (r *NoteRepository) GetNoteByID(id int) (Note, error) {
+func (r *NoteRepository) GetNoteByID(id int) (model.Note, error) {
 	query := `SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?`
 
 	// 受け皿を作る。時刻は文字列のため、一旦文字列で受ける
-	var note Note
+	var note model.Note
 	var createdAt string
 	var updatedAt string
 
@@ -82,17 +75,17 @@ func (r *NoteRepository) GetNoteByID(id int) (Note, error) {
 		&updatedAt,
 	)
 	if err != nil {
-		return Note{}, err
+		return model.Note{}, err
 	}
 
 	note.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
 	if err != nil {
-		return Note{}, err
+		return model.Note{}, err
 	}
 
 	note.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
 	if err != nil {
-		return Note{}, err
+		return model.Note{}, err
 	}
 
 	return note, nil
