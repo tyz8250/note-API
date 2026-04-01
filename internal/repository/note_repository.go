@@ -90,3 +90,15 @@ func (r *NoteRepository) GetNoteByID(id int) (model.Note, error) {
 
 	return note, nil
 }
+
+func (r *NoteRepository) CreateNote(note model.Note) (model.Note, error) {
+	query := `
+	INSERT INTO notes (title, content, created_at, updated_at)
+	VALUES (?, ?, ?, ?)
+	`
+	_, err := r.db.Exec(query, note.Title, note.Content, note.CreatedAt.Format(time.RFC3339), note.UpdatedAt.Format(time.RFC3339))
+	if err != nil {
+		return model.Note{}, err
+	}
+	return note, nil
+}
