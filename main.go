@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"note-api/internal/model"
 	"note-api/internal/repository"
 	"strconv"
 	"strings"
@@ -89,13 +90,15 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 時刻を決める
-	now := time.Now().Format(time.RFC3339)
-	query := `
-	INSERT INTO notes (title, content, created_at, updated_at)
-	VALUES (?, ?, ?, ?)
-	`
-	_, err := db.Exec(query, request.Title, request.Content, now, now)
+	now := time.Now()
+	note := model.Note{
+		Title:     request.Title,
+		Content:   request.Content,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	_, err := noteRepo.CreateNote(note)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
