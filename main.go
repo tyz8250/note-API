@@ -19,21 +19,27 @@ type ErrorResponse struct {
 
 var noteRepo *repository.NoteRepository
 
-func writeJSONError(w http.ResponseWriter, status int, message string) {
-	// JSONエラーを返す方式
+func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	// 400や404などのステータスコードを返す
 	w.WriteHeader(status)
-	// エラーをJSONで返す
-	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
+	json.NewEncoder(w).Encode(v)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
 }
 
 // GET /notes - 一覧を取得
 func getNotes(w http.ResponseWriter, r *http.Request) {
+	// メソッドチェック
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
 
 	notes, err := noteRepo.GetAllNotes()
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -43,6 +49,12 @@ func getNotes(w http.ResponseWriter, r *http.Request) {
 
 // GET /notes/{id} - IDでメモを取得
 func getNotesId(w http.ResponseWriter, r *http.Request) {
+	// メソッドチェック
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
 	idStr := r.PathValue("id")
 
 	targetID, err := strconv.Atoi(idStr)
@@ -68,6 +80,12 @@ func getNotesId(w http.ResponseWriter, r *http.Request) {
 
 // POST /notes- 新規メモを作成
 func postNotes(w http.ResponseWriter, r *http.Request) {
+	// メソッドチェック
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
 	// POSTではサーバが材料を受け取ってからNoteを作成する
 	type NoteRequest struct {
 		Title   string `json:"title"`
@@ -109,6 +127,11 @@ func postNotes(w http.ResponseWriter, r *http.Request) {
 
 // PUT /notes/{id} - IDでメモを更新
 func putNotesID(w http.ResponseWriter, r *http.Request) {
+	// メソッドチェック
+	if r.Method != http.MethodPut {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
 
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
@@ -162,6 +185,12 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /notes/{id} - IDでメモを削除
 func deleteNotesID(w http.ResponseWriter, r *http.Request) {
+	// メソッドチェック
+	if r.Method != http.MethodDelete {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
 	// idを取得する
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)

@@ -387,3 +387,90 @@ func TestDeleteNotesID_InvalidID_ReturnsBadRequest(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
+
+// TestGetNotes_MethodNotAllowed_ReturnsJSONError は 405 時に JSON エラーを返すことを確認する
+func TestGetNotes_MethodNotAllowed_ReturnsJSONError(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/notes", nil)
+	w := httptest.NewRecorder()
+
+	getNotes(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, w.Code)
+	}
+
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+
+	body := strings.TrimSpace(w.Body.String())
+	if body != `{"error":"method not allowed"}` {
+		t.Fatalf("expected body %q, got %q", `{"error":"method not allowed"}`, body)
+	}
+}
+
+// TestGetNotesId_InvalidID_ReturnsJSONBadRequest は 400 時に JSON を返すことを確認する
+func TestGetNotesId_InvalidID_ReturnsJSONBadRequest(t *testing.T) {
+	setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/notes/abc", nil)
+	req.SetPathValue("id", "abc")
+	w := httptest.NewRecorder()
+
+	getNotesId(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+}
+
+// TestGetNotesId_NotFound_ReturnsJSONNotFound は 404 時に JSON を返すことを確認する
+func TestGetNotesId_NotFound_ReturnsJSONNotFound(t *testing.T) {
+	setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/notes/999", nil)
+	req.SetPathValue("id", "999")
+	w := httptest.NewRecorder()
+
+	getNotesId(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+}
+
+// TestGetNotes_InternalServerError_ReturnsJSONMessage は 500 時のメッセージが統一されることを確認する
+func TestGetNotes_InternalServerError_ReturnsJSONMessage(t *testing.T) {
+	setupTestDB(t)
+
+	// DBを閉じて内部エラーを意図的に発生させる
+	if err := db.Close(); err != nil {
+		t.Fatalf("failed to close db: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/notes", nil)
+	w := httptest.NewRecorder()
+
+	getNotes(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	}
+
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+
+	body := strings.TrimSpace(w.Body.String())
+	if body != `{"error":"internal server error"}` {
+		t.Fatalf("expected body %q, got %q", `{"error":"internal server error"}`, body)
+	}
+}
