@@ -337,3 +337,53 @@ func TestDeleteNotesID_NotFound_ReturnsNotFound(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
+
+// TestGetNotesId_InvalidID_ReturnsBadRequest は無効なIDでGETした場合に400を返すことを確認する
+func TestGetNotesId_InvalidID_ReturnsBadRequest(t *testing.T) {
+	setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/notes/abc", nil)
+	req.SetPathValue("id", "abc")
+
+	w := httptest.NewRecorder()
+
+	getNotesId(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+// TestPutNotesID_InvalidJSON_ReturnsBadRequest は無効なJSONでPUTした場合に400を返すことを確認する
+func TestPutNotesID_InvalidJSON_ReturnsBadRequest(t *testing.T) {
+	setupTestDB(t)
+
+	body := `{"title":"更新タイトル","content":}`
+	req := httptest.NewRequest(http.MethodPut, "/notes/1", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.SetPathValue("id", "1")
+
+	w := httptest.NewRecorder()
+
+	putNotesID(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+// TestDeleteNotesID_InvalidID_ReturnsBadRequest は無効なIDでDELETEした場合に400を返すことを確認する
+func TestDeleteNotesID_InvalidID_ReturnsBadRequest(t *testing.T) {
+	setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/notes/abc", nil)
+	req.SetPathValue("id", "abc")
+
+	w := httptest.NewRecorder()
+
+	deleteNotesID(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
