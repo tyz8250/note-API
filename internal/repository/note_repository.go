@@ -133,3 +133,23 @@ func (r *NoteRepository) UpdateNote(note model.Note) (model.Note, error) {
 
 	return note, nil
 }
+
+func (r *NoteRepository) DeleteNote(note model.Note) (model.Note, error) {
+	query := "DELETE FROM notes WHERE id = ?"
+	result, err := r.db.Exec(query, note.ID)
+	if err != nil {
+		return model.Note{}, err
+	}
+
+	// 削除された行数を取得
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.Note{}, err
+	}
+
+	if affected == 0 {
+		return model.Note{}, sql.ErrNoRows
+	}
+
+	return note, nil
+}

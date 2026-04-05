@@ -169,24 +169,17 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	query := "DELETE FROM notes WHERE id = ?"
-	result, err := db.Exec(query, id)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 
-	// 削除された行数を取得
-	affected, err := result.RowsAffected()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	if affected == 0 {
+	_, err = noteRepo.DeleteNote(model.Note{ID: id})
+	if err == sql.ErrNoRows {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
