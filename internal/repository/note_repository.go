@@ -102,3 +102,34 @@ func (r *NoteRepository) CreateNote(note model.Note) (model.Note, error) {
 	}
 	return note, nil
 }
+func (r *NoteRepository) UpdateNote(note model.Note) (model.Note, error) {
+	query := `
+	UPDATE notes
+	SET title = ?, content = ?, updated_at = ?
+	WHERE id = ?
+	`
+	// 実行
+	result, err := r.db.Exec(
+		query,
+		note.Title,
+		note.Content,
+		note.UpdatedAt.Format(time.RFC3339),
+		note.ID,
+	)
+	if err != nil {
+		return model.Note{}, err
+	}
+
+	// 影響を受けた行数を取得
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.Note{}, err
+	}
+
+	// 影響を受けた行数が0なら、該当するメモが存在しない
+	if affected == 0 {
+		return model.Note{}, sql.ErrNoRows
+	}
+
+	return note, nil
+}

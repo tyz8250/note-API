@@ -138,31 +138,25 @@ func putNotesID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now().Format(time.RFC3339)
-	query := `
-	UPDATE notes
-	SET title = ?, content = ?, updated_at = ?
-	WHERE id = ?
-	`
+	now := time.Now()
 
-	// 更新命令
-	result, err := db.Exec(query, request.Title, request.Content, now, id)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
+	note := model.Note{
+		ID:        id,
+		Title:     request.Title,
+		Content:   request.Content,
+		UpdatedAt: now,
 	}
 
-	// 更新された行数を取得
-	affected, err := result.RowsAffected()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	if affected == 0 {
+	_, err = noteRepo.UpdateNote(note)
+	if err == sql.ErrNoRows {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
