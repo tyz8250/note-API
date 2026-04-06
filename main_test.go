@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"note-api/internal/repository"
@@ -473,4 +474,99 @@ func TestGetNotes_InternalServerError_ReturnsJSONMessage(t *testing.T) {
 	if body != `{"error":"internal server error"}` {
 		t.Fatalf("expected body %q, got %q", `{"error":"internal server error"}`, body)
 	}
+}
+
+// assertJSONErrorResponse は JSON エラーレスポンスの共通チェックを行うヘルパー関数
+func assertJSONErrorResponse(t *testing.T, rr *httptest.ResponseRecorder, expectedStatus int, expectedError string) {
+	t.Helper()
+
+	// ステータスコードの確認
+	if rr.Code != expectedStatus {
+		t.Fatalf("expected status %d, got %d", expectedStatus, rr.Code)
+	}
+
+	// Content-Type の確認
+	contentType := rr.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/json") {
+		t.Fatalf("expected Content-Type application/json, got %s", contentType)
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response body: %v", err)
+	}
+
+	if resp["error"] != expectedError {
+		t.Fatalf("expected error %q, got %q", expectedError, resp["error"])
+	}
+}
+
+// TestPostNotes_MethodNotAllowed_ReturnsJSONMessage は 405 時のメッセージが統一されることを確認する
+func TestPostNotes_MethodNotAllowed_ReturnsJSONMessage(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/notes", nil)
+	rr := httptest.NewRecorder()
+
+	postNotes(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusMethodNotAllowed, "method not allowed")
+}
+
+// TestPostNotes_InvalidRequestBody は 不正なリクエストボディ時のメッセージが統一されることを確認する
+func TestPostNotes_InvalidRequestBody(t *testing.T) {
+	body := strings.NewReader(`{"title":"test","content":`)
+	req := httptest.NewRequest(http.MethodPost, "/notes", body)
+	rr := httptest.NewRecorder()
+
+	postNotes(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusBadRequest, "invalid request body")
+}
+
+// TestGetNotesID_InvalidID は 不正なID時のメッセージが統一されることを確認する
+func TestGetNotesID_InvalidID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/notes/abc", nil)
+	req.SetPathValue("id", "abc")
+	rr := httptest.NewRecorder()
+
+	getNotesId(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusBadRequest, "invalid id")
+}
+
+// TestGetNotesID_NotFound は 存在しないID時のメッセージが統一されることを確認する
+func TestGetNotesID_NotFound(t *testing.T) {
+	setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/notes/999999", nil)
+	req.SetPathValue("id", "999999")
+	rr := httptest.NewRecorder()
+
+	getNotesId(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusNotFound, "not found")
+}
+
+// TestPostNotes_TitleIsRequired は タイトルが必須時のメッセージが統一されることを確認する
+func TestPostNotes_TitleIsRequired(t *testing.T) {
+	setupTestDB(t)
+
+	body := strings.NewReader(`{"title":"","content":"hello"}`)
+	req := httptest.NewRequest(http.MethodPost, "/notes", body)
+	rr := httptest.NewRecorder()
+
+	postNotes(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusBadRequest, "title is required")
+}
+
+func TestPostNotes_ContentIsRequired(t *testing.T) {
+	setupTestDB(t)
+
+	body := strings.NewReader(`{"title":"test","content":""}`)
+	req := httptest.NewRequest(http.MethodPost, "/notes", body)
+	rr := httptest.NewRecorder()
+
+	postNotes(rr, req)
+
+	assertJSONErrorResponse(t, rr, http.StatusBadRequest, "content is required")
 }
