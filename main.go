@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"note-api/config"
 	"note-api/internal/model"
 	"note-api/internal/repository"
 	"strconv"
@@ -215,9 +216,10 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 var db *sql.DB
 
 func main() {
+	cfg := config.Load()
 
 	var err error
-	db, err = sql.Open("sqlite", "./notes.db")
+	db, err = sql.Open("sqlite", cfg.DBPath)
 	// DB接続に失敗した場合、プログラムを終了する
 	if err != nil {
 		panic(err)
@@ -243,5 +245,8 @@ func main() {
 	http.HandleFunc("POST /notes", postNotes)
 	http.HandleFunc("PUT /notes/{id}", putNotesID)
 	http.HandleFunc("DELETE /notes/{id}", deleteNotesID)
-	http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":"+cfg.Port, nil)
+	if err != nil {
+		panic(err)
+	}
 }
