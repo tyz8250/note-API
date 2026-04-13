@@ -65,6 +65,11 @@ curl -X PUT http://localhost:8080/notes/1 \
 curl -X DELETE http://localhost:8080/notes/1
 ```
 
+## Health Check
+
+```bash
+curl http://localhost:8080/healthz
+
 ## 環境変数
 
 | 環境変数 | 概要 | 例 |
