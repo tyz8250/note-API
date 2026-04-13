@@ -65,10 +65,18 @@ curl -X PUT http://localhost:8080/notes/1 \
 curl -X DELETE http://localhost:8080/notes/1
 ```
 
+## Run with Docker
+
+```bash
+docker build -t note-api .
+docker run --rm -p 8080:8080 note-api
+```
+
 ## Health Check
 
 ```bash
 curl http://localhost:8080/healthz
+```
 
 ## 環境変数
 
