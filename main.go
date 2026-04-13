@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"note-api/config"
 	"note-api/internal/model"
@@ -215,15 +217,19 @@ func deleteNotesID(w http.ResponseWriter, r *http.Request) {
 
 var db *sql.DB
 
-func main() {
-	cfg := config.Load()
-
-	var err error
-	db, err = sql.Open("sqlite", cfg.DBPath)
-	// DB接続に失敗した場合、プログラムを終了する
+func openDB(cfg config.Config) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+	return db, nil
+}
+
+func ensureSchema(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS notes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT NOT NULL,
@@ -231,22 +237,43 @@ func main() {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`
-	noteRepo = repository.NewNoteRepository(db)
-	_, err = db.Exec(query) // テーブルを作成する
-	if err != nil {
-		panic(err)
+	if _, err := db.Exec(query); err != nil {
+		return fmt.Errorf("create notes table: %w", err)
 	}
-	// テーブルを作成に失敗した場合、プログラムを終了する
+	return nil
+}
 
-	defer db.Close()
-
+func setupRoutes() {
 	http.HandleFunc("GET /notes", getNotes)
 	http.HandleFunc("GET /notes/{id}", getNotesId)
 	http.HandleFunc("POST /notes", postNotes)
 	http.HandleFunc("PUT /notes/{id}", putNotesID)
 	http.HandleFunc("DELETE /notes/{id}", deleteNotesID)
-	err = http.ListenAndServe(":"+cfg.Port, nil)
+}
+func runServer(cfg config.Config) error {
+	return http.ListenAndServe(":"+cfg.Port, nil)
+}
+
+func main() {
+	cfg := config.Load()
+
+	var err error
+	db, err = openDB(cfg)
+	// DB接続に失敗した場合、プログラムを終了する
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	if err := ensureSchema(db); err != nil {
+		log.Fatal(err)
+	}
+
+	noteRepo = repository.NewNoteRepository(db)
+
+	setupRoutes()
+
+	if err = runServer(cfg); err != nil {
+		log.Fatal(err)
 	}
 }
