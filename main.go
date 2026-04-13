@@ -243,12 +243,20 @@ func ensureSchema(db *sql.DB) error {
 	return nil
 }
 
+// GET /healthz - ヘルスチェック
+func healthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
 func setupRoutes() {
 	http.HandleFunc("GET /notes", getNotes)
 	http.HandleFunc("GET /notes/{id}", getNotesId)
 	http.HandleFunc("POST /notes", postNotes)
 	http.HandleFunc("PUT /notes/{id}", putNotesID)
 	http.HandleFunc("DELETE /notes/{id}", deleteNotesID)
+	http.HandleFunc("GET /healthz", healthz)
 }
 func runServer(cfg config.Config) error {
 	return http.ListenAndServe(":"+cfg.Port, nil)
